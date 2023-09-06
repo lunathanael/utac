@@ -98,6 +98,28 @@ void print_board(int board[], int occ[]) {
 	cout << "  ----------------------\n";
 }
 
+void get_valid_moves_old(MOVES_LIST* list, GAMESTATE* gs) {
+	if ((gs->game_occ >> square_to_grid[gs->last_square]) & 1) {
+		for (int a = 0; a < 9; ++a) {
+			if (gs->game_occ >> a & 1) continue;
+			int ss = grid_to_start_square[a];
+			for (int i = 0; i < 3; ++i) {
+				for (int j = 0; j < 3; ++j) {
+					if (!(gs->occ[a] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
+				}
+			}
+		}
+	}
+	else {
+		int ss = grid_to_start_square[square_to_grid[gs->last_square]];
+		for (int i = 0; i < 3; ++i) {
+			for (int j = 0; j < 3; ++j) {
+				if (!(gs->occ[square_to_grid[gs->last_square]] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
+			}
+		}
+	}
+
+}
 void get_valid_moves(MOVES_LIST* list, int occ[], const int square, const int game_occ) {
 	int a, l;
 	if ((game_occ >> square) & 1) {
@@ -117,21 +139,20 @@ void get_valid_moves(MOVES_LIST* list, int occ[], const int square, const int ga
 	}
 }
 
-
-void get_valid_moves(MOVES_LIST* list, int occ[], const int square, const int game_occ) {
+void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 	int a, l;
-	if ((game_occ >> square) & 1) {
+	if ((gs->game_occ >> gs->last_square) & 1) {
 		a = 0, l = 9;
 	}
 	else {
-		a = square, l = square + 1;
+		a = gs->last_square, l = gs->last_square + 1;
 	}
 	for (; a < l; ++a) {
-		if (game_occ >> a & 1) continue;
+		if (gs->game_occ >> a & 1) continue;
 		int ss = grid_to_start_square[a];
 		for (int i = 0; i < 3; ++i) {
 			for (int j = 0; j < 3; ++j) {
-				if (!(occ[a] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
+				if (!(gs->occ[a] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
 			}
 		}
 	}
@@ -147,6 +168,12 @@ int top_left_engine(const int square, int board[], int occ[], const int game_occ
 int bottom_right_engine(const int square, int board[], int occ[], const int game_occ) {
 	MOVES_LIST list[1];
 	get_valid_moves(list, occ, square, game_occ);
+	return list->moves[list->count - 1];
+};
+
+int bottom_right_engine(GAMESTATE*gs) {
+	MOVES_LIST list[1];
+	get_valid_moves(list, gs);
 	return list->moves[list->count - 1];
 };
 
@@ -171,8 +198,8 @@ int human_engine(const int square, int board[], int occ[], const int game_occ) {
 	return (row-1) * 9 + col - 1;
 };
 
-static inline bool game_over(const int game_occ, const int main_board, const int main_occ) {
-	return game_occ != 511 || !eval[main_board] || !eval[~main_board & main_occ];
+static inline bool game_over(GAMESTATE*gs) {
+	return gs->game_occ == 511 || eval[gs->main_board] || eval[~gs->main_board & gs->main_occ];
 }
 
 static inline int make_move(GAMESTATE* gs, const int square) {
@@ -183,23 +210,28 @@ static inline int make_move(GAMESTATE* gs, const int square) {
 	gs->side ^= 1;
 
 	//update gs
-	game_occ |= (eval[board[curr_square]] || eval[~board[curr_square] & board_occ[curr_square]] || board_occ[curr_square] == 511) << curr_square;
-	main_occ |= (eval[board[curr_square]] || eval[~board[curr_square] & board_occ[curr_square]]) << curr_square;
-	main_board |= eval[board[curr_square]] << curr_square;
+	gs->game_occ |= (eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square;
+	gs->main_occ |= (eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]]) << curr_square;
+	gs->main_board |= eval[gs->board[curr_square]] << curr_square;
 	return grid_square;
 }
 
-int test(int(*engX)GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
+int test(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
 	GAMESTATE gs[1];
 
 	// set to random later
-	gs->last_square = 30;
+	gs->last_square = 4;
 
-	while (!game_over(game_occ, main_board, main_occ)) {
-		int chosen_square = (side) ? engX(gs) : engO(gs);
+	while (!game_over(gs)) {
+		print_board(gs->board, gs->occ);
+		int chosen_square = (gs->side) ? engX(gs) : engO(gs);
 		// verify move
 		MOVES_LIST list[1];
 		get_valid_moves(list, gs);
+		for (int i = 0; i < list->count; ++i) {
+			cout << list->moves[i] << ' ';
+		}
+		cout << '\n';
 		if (!find(list->moves, list->moves + list->count, chosen_square)) {
 			cout << "INVALID: " << chosen_square << '\n'; for (int i : list->moves) { cout << i << ' '; } return -100;
 		}
@@ -249,7 +281,9 @@ int main()
 {
 	init_eval();
 	init_stg();
-	cout << game(&bottom_right_engine, &bottom_right_engine);
+
+	cout << test(&bottom_right_engine, &bottom_right_engine);
+	//cout << game(&bottom_right_engine, &bottom_right_engine);
 	cout << "GAME OVER";
 	return 0;
 }
