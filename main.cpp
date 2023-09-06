@@ -98,46 +98,6 @@ void print_board(int board[], int occ[]) {
 	cout << "  ----------------------\n";
 }
 
-void get_valid_moves_old(MOVES_LIST* list, GAMESTATE* gs) {
-	if ((gs->game_occ >> square_to_grid[gs->last_square]) & 1) {
-		for (int a = 0; a < 9; ++a) {
-			if (gs->game_occ >> a & 1) continue;
-			int ss = grid_to_start_square[a];
-			for (int i = 0; i < 3; ++i) {
-				for (int j = 0; j < 3; ++j) {
-					if (!(gs->occ[a] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
-				}
-			}
-		}
-	}
-	else {
-		int ss = grid_to_start_square[square_to_grid[gs->last_square]];
-		for (int i = 0; i < 3; ++i) {
-			for (int j = 0; j < 3; ++j) {
-				if (!(gs->occ[square_to_grid[gs->last_square]] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
-			}
-		}
-	}
-
-}
-void get_valid_moves(MOVES_LIST* list, int occ[], const int square, const int game_occ) {
-	int a, l;
-	if ((game_occ >> square) & 1) {
-		a = 0, l = 9;
-	}
-	else {
-		a = square, l = square + 1;
-	}
-	for (; a < l; ++a) {
-		if (game_occ >> a & 1) continue;
-		int ss = grid_to_start_square[a];
-		for (int i = 0; i < 3; ++i) {
-			for (int j = 0; j < 3; ++j) {
-				if (!(occ[a] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
-			}
-		}
-	}
-}
 
 void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 	int a, l;
@@ -158,17 +118,10 @@ void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 	}
 }
 
-int top_left_engine(const int square, int board[], int occ[], const int game_occ) {
+int top_left_engine(GAMESTATE* gs) {
 	MOVES_LIST list[1];
-	get_valid_moves(list, occ, square, game_occ);
+	get_valid_moves(list, gs);
 	return list->moves[0];
-};
-
-
-int bottom_right_engine(const int square, int board[], int occ[], const int game_occ) {
-	MOVES_LIST list[1];
-	get_valid_moves(list, occ, square, game_occ);
-	return list->moves[list->count - 1];
 };
 
 int bottom_right_engine(GAMESTATE*gs) {
@@ -177,32 +130,23 @@ int bottom_right_engine(GAMESTATE*gs) {
 	return list->moves[list->count - 1];
 };
 
-
-int human_engine(const int square, int board[], int occ[], const int game_occ) {
-	print_board(board, occ);
-	if (square != -1) {
-		cout << "Pick a move in game " << square<< ". (row then column indexed by 0):  ";
+int human_engine(GAMESTATE* gs) {
+	print_board(gs->board, gs->occ);
+	if ((gs->game_occ >> gs->last_square) & 1) {
+		cout << "Pick a move in game " << gs->last_square + 1 << ". (row then column) :";
 	}
-	else {
-		cout << ("Pick any square") << ". (row then column indexed by 0):  ";
-	}
-	MOVES_LIST list[1];
-	get_valid_moves(list, occ, square, game_occ);
-	for (int i = 0; i < list->count; ++i) {
-		cout << '\n' << list->moves[i] << ' ' << list->moves[i] / 9 + 1 << list->moves[i] % 9 + 1;
-	}
-	cout << '\n';
 
 	int row, col;
 	cin >> row >> col;
-	return (row-1) * 9 + col - 1;
+	return (row - 1) * 9 + col - 1;
 };
+
 
 static inline bool game_over(GAMESTATE*gs) {
 	return gs->game_occ == 511 || eval[gs->main_board] || eval[~gs->main_board & gs->main_occ];
 }
 
-static inline int make_move(GAMESTATE* gs, const int square) {
+static inline void make_move(GAMESTATE* gs, const int square) {
 	int curr_square = square_to_grid[square];
 	int grid_square = square_to_grid_square[square];
 	gs->occ[curr_square] |= (1 << grid_square);
@@ -213,10 +157,29 @@ static inline int make_move(GAMESTATE* gs, const int square) {
 	gs->game_occ |= (eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square;
 	gs->main_occ |= (eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]]) << curr_square;
 	gs->main_board |= eval[gs->board[curr_square]] << curr_square;
-	return grid_square;
+	
+	gs->last_square = grid_square;
+	return;
 }
 
-int test(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
+
+static inline void undo_move(GAMESTATE* gs, const int square, const int prev_last) {
+	int curr_square = square_to_grid[square];
+	int grid_square = square_to_grid_square[square];
+	gs->occ[curr_square] &= ~(1 << grid_square);
+	gs->board[curr_square] &= ~(gs->side << grid_square);
+	gs->side ^= 1;
+
+	//update gs
+	gs->game_occ &= ~((eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square);
+	gs->main_occ &= ~((eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]]) << curr_square);
+	gs->main_board &= ~(eval[gs->board[curr_square]] << curr_square);
+
+	gs->last_square = prev_last;
+	return;
+}
+
+int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
 	GAMESTATE gs[1];
 
 	// set to random later
@@ -229,51 +192,91 @@ int test(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
 		MOVES_LIST list[1];
 		get_valid_moves(list, gs);
 		for (int i = 0; i < list->count; ++i) {
-			cout << list->moves[i] << ' ';
+			cout << list->moves[i] << ':' << list->moves[i] / 9 + 1 << ' ' << list->moves[i] % 9 + 1 << '\n';
 		}
 		cout << '\n';
 		if (!find(list->moves, list->moves + list->count, chosen_square)) {
 			cout << "INVALID: " << chosen_square << '\n'; for (int i : list->moves) { cout << i << ' '; } return -100;
 		}
-		gs->last_square = make_move(gs, chosen_square);
+		make_move(gs, chosen_square);
 	}
 	return (eval[gs->main_board]) - (eval[~gs->main_board & gs->main_occ]);
 }
 
 
+#include<Windows.h>
 
-int game(int(*engX)(const int, int[], int[], const int), int(*engO)(const int, int[], int[], const int)) {
-	int board_occ[9] = { 0 };
-	int board[9] = { 0 };
+long long p_nodes;
 
-	int game_occ = 0;
-	int main_occ = 0;
-	int main_board = 0;
-
-	bool side = 1;
-	int curr_square = 4;
-	while (game_occ != 511 && !eval[main_board] && !eval[~main_board & main_occ]) {
-		int chosen_square = (side) ? engX(curr_square, board, board_occ, game_occ) : engO(curr_square, board, board_occ, game_occ);
-		MOVES_LIST list[1];
-		get_valid_moves(list, board_occ, curr_square, game_occ);
-		int row = chosen_square / 9, col = chosen_square % 9, grid_square = row % 3 * 3 + col % 3;
-		if (!find(list->moves, list->moves + list->count, chosen_square)) {
-			cout << "INVALID: " << chosen_square << '\n'; for (int i : list->moves) { cout << i << ' '; } return -100;
-		}
-		curr_square = row / 3 * 3 + col / 3;
-		board_occ[curr_square] |= (1 << (grid_square));
-		board[curr_square] |= (side << grid_square);
-		side ^= 1;
-		if (eval[board[curr_square]] || eval[~board[curr_square] & board_occ[curr_square]] || board_occ[curr_square] == 511) {
-			game_occ |= 1 << curr_square;
-			main_occ |= (eval[board[curr_square]] || eval[~board[curr_square] & board_occ[curr_square]]) << curr_square;
-			main_board |= eval[board[curr_square]] << curr_square;
-		}
-		curr_square = grid_square;//((game_occ >> grid_square) & 1) ? -1 : 
+static inline void perft_driver(int depth, GAMESTATE* gs)
+{
+	if (depth == 0)
+	{
+		++p_nodes;
+		return;
 	}
-	print_board(board, board_occ);
-	cout << "eval: " << (eval[main_board]) - (eval[~main_board & main_occ]) << '\n';
-	return evaluate(board, board_occ);
+
+	MOVES_LIST list[1];
+	get_valid_moves(list, gs);
+
+	for (int move_count = 0; move_count < list->count; ++move_count)
+	{
+		int temp = gs->last_square;
+		make_move(list->moves[move_count])
+		perft_driver(depth - 1, gs);
+		undo_move(gs, list->moves[move_count], temp);)
+	}
+}
+
+static inline void perft_test(int depth)
+{
+	p_nodes = 0;
+	cout << "\n     Performance test\n\n";
+	cout << "\n     Move:    Nodes:\n";
+
+	GAMESTATE gs[1];
+	gs->last_square = 4;
+
+	// create move list instance
+	MOVES_LIST move_list[1];
+
+	// generate moves
+	get_valid_moves(move_list, gs);
+
+	// init start time
+	long start = GetTickCount();
+
+	// loop over generated moves
+	for (int move_count = 0; move_count < move_list->count; move_count++)
+	{
+		// preserve board state
+		int temp = gs->last_square;
+
+		// make move
+		make_move(move_list->moves[move_count];
+
+		// cummulative nodes
+		long long cummulative_nodes = p_nodes;
+
+		// call perft driver recursively
+		perft_driver(depth - 1, gs);
+
+		// old nodes
+		long long old_nodes = p_nodes - cummulative_nodes;
+
+		// take back
+		undo_move(gs, move_list->moves[move_count], temp);
+
+		// print move
+		cout << "     "<<move_list->moves[move_count] / 9 + 1 << ' ' << move_list->moves[move_count] % 9 + 1 << "  "<< old_noves <<"\n";
+	}
+
+	long time = GetTickCount(); - start;
+	// print results
+	cout << "\n    Depth: " << depth << "ply\n";
+	cout << "    Nodes: " << p_nodes << "\n";
+	cout << "     Time: " << time << " ms\n"
+	cout << "      Nps: " << ((p_nodes / time) / 1000) << "MN / s\n\n";
 }
 
 
@@ -281,9 +284,6 @@ int main()
 {
 	init_eval();
 	init_stg();
-
-	cout << test(&bottom_right_engine, &bottom_right_engine);
-	//cout << game(&bottom_right_engine, &bottom_right_engine);
-	cout << "GAME OVER";
+	perft_test(10);
 	return 0;
 }
