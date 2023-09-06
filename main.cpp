@@ -1,5 +1,6 @@
-#include <bits/stdc++.h>
+#include <iostream>
 #include <algorithm>
+#include<Windows.h> // temp
 
 using namespace std;
 
@@ -68,17 +69,6 @@ void init_stg() {
 		int square = i / 3 * 27 + i % 3 * 3;
 		grid_to_start_square[i] = square;
 	}
-}
-
-int evaluate(int board[], int board_occ[]) {
-	int tmp = 0;
-	int occ = 0;
-	for (int i = 0; i < 9; ++i) {
-		tmp |= ((eval[board[i]]) << i);
-		occ |= ((eval[board[i]]) << i);
-		occ |= ((eval[~board[i] & board_occ[i]]) << i);
-	}
-	return (eval[tmp]) - (eval[~tmp & occ]);
 }
 
 char int_to_char[] = { '.', 'O', 'X' };
@@ -167,13 +157,13 @@ static inline void undo_move(GAMESTATE* gs, const int square, const int prev_las
 	int curr_square = square_to_grid[square];
 	int grid_square = square_to_grid_square[square];
 	gs->occ[curr_square] &= ~(1 << grid_square);
-	gs->board[curr_square] &= ~(gs->side << grid_square);
+	gs->board[curr_square] &= ~(1 << grid_square);
 	gs->side ^= 1;
 
 	//update gs
-	gs->game_occ &= ~((eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square);
-	gs->main_occ &= ~((eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]]) << curr_square);
-	gs->main_board &= ~(eval[gs->board[curr_square]] << curr_square);
+	gs->game_occ &= ~(1 << curr_square);
+	gs->main_occ &= ~(1 << curr_square);
+	gs->main_board &= ~(1 << curr_square);
 
 	gs->last_square = prev_last;
 	return;
@@ -204,7 +194,6 @@ int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
 }
 
 
-#include<Windows.h>
 
 long long p_nodes;
 
@@ -222,9 +211,9 @@ static inline void perft_driver(int depth, GAMESTATE* gs)
 	for (int move_count = 0; move_count < list->count; ++move_count)
 	{
 		int temp = gs->last_square;
-		make_move(list->moves[move_count])
+		make_move(gs, list->moves[move_count]);
 		perft_driver(depth - 1, gs);
-		undo_move(gs, list->moves[move_count], temp);)
+		undo_move(gs, list->moves[move_count], temp);
 	}
 }
 
@@ -253,7 +242,7 @@ static inline void perft_test(int depth)
 		int temp = gs->last_square;
 
 		// make move
-		make_move(move_list->moves[move_count];
+		make_move(gs, move_list->moves[move_count]);
 
 		// cummulative nodes
 		long long cummulative_nodes = p_nodes;
@@ -268,14 +257,14 @@ static inline void perft_test(int depth)
 		undo_move(gs, move_list->moves[move_count], temp);
 
 		// print move
-		cout << "     "<<move_list->moves[move_count] / 9 + 1 << ' ' << move_list->moves[move_count] % 9 + 1 << "  "<< old_noves <<"\n";
+		cout << "     "<<move_list->moves[move_count] / 9 + 1 << ' ' << move_list->moves[move_count] % 9 + 1 << "  "<< old_nodes <<"\n";
 	}
 
-	long time = GetTickCount(); - start;
+	long time = GetTickCount() - start;
 	// print results
 	cout << "\n    Depth: " << depth << "ply\n";
 	cout << "    Nodes: " << p_nodes << "\n";
-	cout << "     Time: " << time << " ms\n"
+	cout << "     Time: " << time << " ms\n";
 	cout << "      Nps: " << ((p_nodes / time) / 1000) << "MN / s\n\n";
 }
 
@@ -284,6 +273,8 @@ int main()
 {
 	init_eval();
 	init_stg();
-	perft_test(10);
+
+
+	perft_test(9);
 	return 0;
 }
