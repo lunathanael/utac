@@ -33,6 +33,11 @@ typedef struct {
 	int last_square = -1;
 }GAMESTATE;
 
+typedef struct {
+	int root;
+	int best_move;
+}SEARCH_INFO;
+
 bool eval[512];
 int square_to_grid_square[81];
 int square_to_grid[81];
@@ -108,6 +113,15 @@ void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 	}
 }
 
+static inline int eval1(GAMESTATE* gs) {
+	if (eval[gs->main_board]) return 1000; // X VICTORY
+	if (eval[~gs->main_board & gs->main_occ]) return -1000; // O VICTORY
+	if (gs->game_occ == 511) return 0; // DRAW
+
+	// speculative eval
+	return (__builtin_popcount(gs->main_board) - __builtin_popcount(~gs->main_board & gs->main_occ));
+}
+
 int top_left_engine(GAMESTATE* gs) {
 	MOVES_LIST list[1];
 	get_valid_moves(list, gs);
@@ -181,15 +195,13 @@ int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
 		// verify move
 		MOVES_LIST list[1];
 		get_valid_moves(list, gs);
-		for (int i = 0; i < list->count; ++i) {
-			cout << list->moves[i] << ':' << list->moves[i] / 9 + 1 << ' ' << list->moves[i] % 9 + 1 << '\n';
-		}
-		cout << '\n';
 		if (!find(list->moves, list->moves + list->count, chosen_square)) {
 			cout << "INVALID: " << chosen_square << '\n'; for (int i : list->moves) { cout << i << ' '; } return -100;
 		}
 		make_move(gs, chosen_square);
 	}
+	cout << "RESULT: \n";
+	print_board(gs->board, gs->occ);
 	return (eval[gs->main_board]) - (eval[~gs->main_board & gs->main_occ]);
 }
 
@@ -269,12 +281,101 @@ static inline void perft_test(int depth)
 }
 
 
+int nega_min_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO*info) {
+	if (depth == 0) {
+		return side * eval1(gs);
+	}
+	int bestScore = -10000;
+	MOVES_LIST list[1];
+	get_valid_moves(list, gs);
+	if (!list->count) return side * eval1(gs);
+	int temp = gs->last_square;
+	for (int i = 0; i < list->count; ++i) {
+		make_move(gs, list->moves[i]);
+		int score = -nega_min_max(gs, depth - 1, -side, info);
+		if (score > bestScore) {
+			bestScore = score;
+			if (depth == info->root) info->best_move = list->moves[i];
+		}
+		undo_move(gs, list->moves[i], temp);
+	}
+	return bestScore;
+}
+
+int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, int beta) {
+	if (depth == 0) {
+		return side * eval1(gs);
+	}
+	MOVES_LIST list[1];
+	get_valid_moves(list, gs);
+	if (!list->count) return side * eval1(gs);
+	int temp = gs->last_square;
+	for (int i = 0; i < list->count; ++i) {
+		make_move(gs, list->moves[i]);
+		int score = -nega_max(gs, depth - 1, -side, info, -beta, -alpha);
+		undo_move(gs, list->moves[i], temp);
+		if (score >= beta) return beta;
+		if (score > alpha) {
+			alpha = score;
+			if (depth == info->root) info->best_move = list->moves[i];
+		}
+	}
+	return alpha;
+}
+
+int nega_engine(GAMESTATE* gs) {
+	SEARCH_INFO info[1];
+	info->root = 11;
+	cout << nega_max(gs, 11, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	return info->best_move;
+}
+int nega_engine1(GAMESTATE* gs) {
+	SEARCH_INFO info[1];
+	info->root = 14;
+	cout << nega_max(gs, 14, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	return info->best_move;
+}
+//
+//
+//static inline void iterative_deepen(GAMESTATE*gs, depth)
+//{
+//	int bestScore = -100000;
+//	int currentDepth = 1;
+//	for (; currentDepth <= depth; ++currentDepth)
+//	{
+//
+//
+//		bestScore = nega_max(gs, depth, (gs->side) ? 1 : -1, depth);
+//
+//
+//
+//		long time = get_time_ms() - info->starttime;
+//		U64 nps = info->nodes / (time + !time) * 1000;
+//
+//		if (bestScore > -VALUE_MATE && bestScore < VALUE_MATED_IN_MAX_PLY)
+//		{
+//			std::cout << "info score mate " << -(bestScore + VALUE_MATE) / 2 << " depth " << currentDepth << " nodes " << info->nodes <<
+//				" nps " << nps << " time " << time << " pv ";
+//		}
+//		else if (bestScore > VALUE_MATE_IN_MAX_PLY && bestScore < VALUE_MATE)
+//		{
+//			std::cout << "info score mate " << (VALUE_MATE - bestScore) / 2 + 1 << " depth " << currentDepth << " nodes " << info->nodes <<
+//				" nps " << nps << " time " << time << " pv ";
+//		}
+//		else {
+//			std::cout << "info score cp " << bestScore << " depth " << currentDepth << " nodes " << info->nodes <<
+//				" nps " << nps << " time " << time << " pv ";
+//		}
+//		std::cout << Pr_move(info->bestMove) << std::endl;
+//	}
+//	std::cout << "bestmove " << Pr_move(info->bestMove) << "\n";
+//}
+
+
 int main()
 {
 	init_eval();
 	init_stg();
-
-
-	perft_test(9);
+	cout << game(&nega_engine, &nega_engine1);
 	return 0;
 }
