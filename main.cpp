@@ -53,6 +53,8 @@ void dfs_helper(int& tmp, int a) {
 		eval[tmp] |= ((tmp & 56) == 56);
 		eval[tmp] |= ((tmp & 448) == 448);
 		eval[tmp] |= ((tmp & 73) == 73);
+		eval[tmp] |= ((tmp & 146) == 146);
+		eval[tmp] |= ((tmp & 292) == 292);
 		eval[tmp] |= ((tmp & 273) == 273);
 		eval[tmp] |= ((tmp & 84) == 84);
 		return;
@@ -128,6 +130,25 @@ static inline int eval1(GAMESTATE* gs) {
 	return (__builtin_popcount(gs->main_board) - __builtin_popcount(~gs->main_board & gs->main_occ));
 }
 
+
+static inline int evaldef(GAMESTATE* gs) {
+	if (eval[gs->main_board]) return 1000; // X VICTORY
+	if (eval[~gs->main_board & gs->main_occ]) return -1000; // O VICTORY
+	if (gs->game_occ == 511) return 0; // DRAW
+
+	// speculative eval
+	return (9 -__builtin_popcount(~gs->main_board & gs->main_occ));
+}
+
+static inline int evalaggor(GAMESTATE* gs) {
+	if (eval[gs->main_board]) return 1000; // X VICTORY
+	if (eval[~gs->main_board & gs->main_occ]) return -1000; // O VICTORY
+	if (gs->game_occ == 511) return 0; // DRAW
+
+	// speculative eval
+	return __builtin_popcount(gs->main_board);
+}
+
 int top_left_engine(GAMESTATE* gs) {
 	MOVES_LIST list[1];
 	get_valid_moves(list, gs);
@@ -141,13 +162,13 @@ int bottom_right_engine(GAMESTATE*gs) {
 };
 
 int human_engine(GAMESTATE* gs) {
-	print_board(gs->board, gs->occ);
-	if ((gs->game_occ >> gs->last_square) & 1) {
-		cout << "Pick a move in game " << gs->last_square + 1 << ". (row then column) :";
-	}
-
+	MOVES_LIST list[1];
+	get_valid_moves(list, gs);
 	int row, col;
-	cin >> row >> col;
+	do {
+		cout << "Player " << ((gs->side) ? "X" : "O") << ", choose a square in game " << gs->last_square + 1 << ". (row then column) : ";
+		cin >> row >> col;
+	} while (find(list->moves, list->moves + list->count, (row - 1) * 9 + col - 1) == list->moves + list->count);
 	return (row - 1) * 9 + col - 1;
 };
 
@@ -193,24 +214,37 @@ int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs), bool print) {
 	GAMESTATE gs[1];
 
 	// set to random later
-	gs->last_square = 4;
+	gs->last_square = (rand() % 9);
+	if (print) print_board(gs->board, gs->occ);
 
 	while (!game_over(gs)) {
-		if (print) print_board(gs->board, gs->occ);
-		cout << gs->game_occ << '\n' << gs->main_board << '\n' << gs->main_occ << '\n';
 		int chosen_square = (gs->side) ? engX(gs) : engO(gs);
 		// verify move
 		MOVES_LIST list[1];
 		get_valid_moves(list, gs);
-		if (!find(list->moves, list->moves + list->count, chosen_square)) {
+		if (find(list->moves, list->moves + list->count, chosen_square) == list->moves + list->count) {
 			cout << "INVALID: " << chosen_square << '\n'; for (int i : list->moves) { cout << i << ' '; } return -100;
 		}
 		make_move(gs, chosen_square);
+		if (print) {
+			print_board(gs->board, gs->occ);
+			cout << "Player ";
+			cout << ((gs->side) ? "O" : "X") << " chose square on row " << chosen_square / 9 + 1 << " and column " << chosen_square % 9 + 1 << ".\n";
+		}
 	}
-	if(print)cout << "RESULT: \n";
-	if(print)print_board(gs->board, gs->occ);
-	cout << gs->game_occ << '\n' << gs->main_board << '\n' << gs->main_occ << '\n';
-	return (eval[gs->main_board]) - (eval[~gs->main_board & gs->main_occ]);
+	int res = (eval[gs->main_board]) - (eval[~gs->main_board & gs->main_occ]);
+	if (print) {
+		cout << "GAME OVER!\n";
+		cout << "Result was a ";
+		if (res != 0) {
+			cout << "victory for player " << ((res == 1) ? "X" : "O") << ".\n";
+		}
+		else {
+			cout << "draw!\n";
+		}
+
+	}
+	return res;
 }
 
 
@@ -384,15 +418,6 @@ int main()
 	init_eval();
 	init_stg();
 	seed = GetTickCount();
-	//GAMESTATE gs[1];
-	//gs->last_square = 0;
-	//gs->game_occ = 1;
-	//MOVES_LIST list[1];
-	//get_valid_moves(list, gs);
-	//for (int i = 0; i < list->count; ++i) {
-	//	cout << list->moves[i] << ' ';
-	//}
-	//perft_test(10);
-	game(&nega_engine, &nega_engine, true);
+	game(&human_engine, &nega_engine, true);
 	return 0;
 }
