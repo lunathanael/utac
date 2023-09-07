@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <random>
 #include<Windows.h> // temp
 
 using namespace std;
@@ -43,12 +44,15 @@ int square_to_grid_square[81];
 int square_to_grid[81];
 int grid_to_start_square[9];
 
+unsigned seed;
+
 
 void dfs_helper(int& tmp, int a) {
 	if (a == 9) {
 		eval[tmp] = ((tmp & 7) == 7);
 		eval[tmp] |= ((tmp & 56) == 56);
 		eval[tmp] |= ((tmp & 448) == 448);
+		eval[tmp] |= ((tmp & 73) == 73);
 		eval[tmp] |= ((tmp & 273) == 273);
 		eval[tmp] |= ((tmp & 84) == 84);
 		return;
@@ -103,11 +107,13 @@ void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 		a = gs->last_square, l = gs->last_square + 1;
 	}
 	for (; a < l; ++a) {
-		if (gs->game_occ >> a & 1) continue;
+		if ((gs->game_occ >> a) & 1) continue;
 		int ss = grid_to_start_square[a];
 		for (int i = 0; i < 3; ++i) {
 			for (int j = 0; j < 3; ++j) {
-				if (!(gs->occ[a] >> (i * 3 + j) & 1)) list->moves[list->count++] = ss + i * 9 + j;
+				if (!(gs->occ[a] >> (i * 3 + j) & 1)) {
+					list->moves[list->count++] = ss + i * 9 + j;
+				}
 			}
 		}
 	}
@@ -183,14 +189,15 @@ static inline void undo_move(GAMESTATE* gs, const int square, const int prev_las
 	return;
 }
 
-int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
+int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs), bool print) {
 	GAMESTATE gs[1];
 
 	// set to random later
 	gs->last_square = 4;
 
 	while (!game_over(gs)) {
-		print_board(gs->board, gs->occ);
+		if (print) print_board(gs->board, gs->occ);
+		cout << gs->game_occ << '\n' << gs->main_board << '\n' << gs->main_occ << '\n';
 		int chosen_square = (gs->side) ? engX(gs) : engO(gs);
 		// verify move
 		MOVES_LIST list[1];
@@ -200,8 +207,9 @@ int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs)) {
 		}
 		make_move(gs, chosen_square);
 	}
-	cout << "RESULT: \n";
-	print_board(gs->board, gs->occ);
+	if(print)cout << "RESULT: \n";
+	if(print)print_board(gs->board, gs->occ);
+	cout << gs->game_occ << '\n' << gs->main_board << '\n' << gs->main_occ << '\n';
 	return (eval[gs->main_board]) - (eval[~gs->main_board & gs->main_occ]);
 }
 
@@ -236,7 +244,7 @@ static inline void perft_test(int depth)
 	cout << "\n     Move:    Nodes:\n";
 
 	GAMESTATE gs[1];
-	gs->last_square = 4;
+	gs->last_square = (rand() % 9);
 
 	// create move list instance
 	MOVES_LIST move_list[1];
@@ -252,7 +260,6 @@ static inline void perft_test(int depth)
 	{
 		// preserve board state
 		int temp = gs->last_square;
-
 		// make move
 		make_move(gs, move_list->moves[move_count]);
 
@@ -267,7 +274,6 @@ static inline void perft_test(int depth)
 
 		// take back
 		undo_move(gs, move_list->moves[move_count], temp);
-
 		// print move
 		cout << "     "<<move_list->moves[move_count] / 9 + 1 << ' ' << move_list->moves[move_count] % 9 + 1 << "  "<< old_nodes <<"\n";
 	}
@@ -309,6 +315,7 @@ int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, i
 	MOVES_LIST list[1];
 	get_valid_moves(list, gs);
 	if (!list->count) return side * eval1(gs);
+	shuffle(list->moves, list->moves + list->count, default_random_engine(seed));
 	int temp = gs->last_square;
 	for (int i = 0; i < list->count; ++i) {
 		make_move(gs, list->moves[i]);
@@ -325,20 +332,20 @@ int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, i
 
 int nega_engine(GAMESTATE* gs) {
 	SEARCH_INFO info[1];
-	info->root = 11;
-	cout << nega_max(gs, 11, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	info->root = 12;
+	nega_max(gs, 12, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
 	return info->best_move;
 }
 int nega_engine1(GAMESTATE* gs) {
 	SEARCH_INFO info[1];
-	info->root = 14;
-	cout << nega_max(gs, 14, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	info->root = 7;
+	nega_max(gs, 7, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
 	return info->best_move;
 }
 //
 //
 //static inline void iterative_deepen(GAMESTATE*gs, depth)
-//{
+//{6
 //	int bestScore = -100000;
 //	int currentDepth = 1;
 //	for (; currentDepth <= depth; ++currentDepth)
@@ -376,6 +383,16 @@ int main()
 {
 	init_eval();
 	init_stg();
-	cout << game(&nega_engine, &nega_engine1);
+	seed = GetTickCount();
+	//GAMESTATE gs[1];
+	//gs->last_square = 0;
+	//gs->game_occ = 1;
+	//MOVES_LIST list[1];
+	//get_valid_moves(list, gs);
+	//for (int i = 0; i < list->count; ++i) {
+	//	cout << list->moves[i] << ' ';
+	//}
+	//perft_test(10);
+	game(&nega_engine, &nega_engine, true);
 	return 0;
 }
