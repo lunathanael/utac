@@ -6,7 +6,7 @@ all:
 	x86_64-w64-mingw32-g++ -Ofast $(SRCS) -o utac.exe
 
 debug:
-	g++ $(SRCS) -o $(NAME)
+	g++ $(SRCS) -DNDEBUG -o $(NAME)
 	x86_64-w64-mingw32-g++ $(SRCS) -o $(NAME)
 
 profile:

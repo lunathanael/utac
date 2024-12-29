@@ -1,6 +1,8 @@
 #include "eval.hpp"
 #include "utils.hpp"
 
+#include <algorithm>
+#include <cmath>
 double eval1(GAMESTATE *gs) {
   if (wincheck[gs->main_board])
     return WIN_SCORE; // X VICTORY
@@ -20,14 +22,6 @@ public:
   double total_score;
 
   BoardHeuristic() : scores{}, total_score{} {}
-  BoardHeuristic operator+(const BoardHeuristic &other) const {
-    BoardHeuristic ret;
-    ret.total_score = total_score + other.total_score;
-    for (int i = 0; i < 9; ++i) {
-      ret.scores[i] = scores[i] + other.scores[i];
-    }
-    return ret;
-  }
 };
 
 static constexpr inline int hash_board(int board, int board_occ) {
@@ -35,7 +29,7 @@ static constexpr inline int hash_board(int board, int board_occ) {
   for (int i = 8; i >= 0; --i) {
     hash *= 3;
     if (board_occ & (1 << i)) {
-      hash += board & (1 << i);
+      hash += (board >> i) & 1;
     } else {
       hash += 2;
     }
@@ -63,44 +57,44 @@ static void dfs_helper(BoardHeuristic &ret, int board, int board_occ,
     double score = (depth == 0) ? FULL_BOARD_HEURISTIC
                                 : OPEN_LANE_HEURISTIC / (depth * depth);
     ret.total_score += score;
-    if ((square & 7) == 7) {
+    if ((board & 7) == 7) {
       ret.scores[0] += score;
       ret.scores[1] += score;
       ret.scores[2] += score;
     }
-    if ((square & 56) == 56) {
+    if ((board & 56) == 56) {
       ret.scores[3] += score;
       ret.scores[4] += score;
       ret.scores[5] += score;
     }
-    if ((square & 448) == 448) {
+    if ((board & 448) == 448) {
       ret.scores[6] += score;
       ret.scores[7] += score;
       ret.scores[8] += score;
     }
 
-    if ((square & 73) == 73) {
+    if ((board & 73) == 73) {
       ret.scores[0] += score;
       ret.scores[3] += score;
       ret.scores[6] += score;
     }
-    if ((square & 146) == 146) {
+    if ((board & 146) == 146) {
       ret.scores[1] += score;
       ret.scores[4] += score;
       ret.scores[7] += score;
     }
-    if ((square & 292) == 292) {
+    if ((board & 292) == 292) {
       ret.scores[2] += score;
       ret.scores[5] += score;
       ret.scores[8] += score;
     }
 
-    if ((square & 273) == 273) {
+    if ((board & 273) == 273) {
       ret.scores[0] += score;
       ret.scores[4] += score;
       ret.scores[8] += score;
     }
-    if ((square & 84) == 84) {
+    if ((board & 84) == 84) {
       ret.scores[2] += score;
       ret.scores[4] += score;
       ret.scores[6] += score;
@@ -118,25 +112,38 @@ static void dfs_helper(BoardHeuristic &ret, int board, int board_occ,
   }
 }
 
+static std::array<double, 9> softmax(const std::array<double, 9> &input) {
+  std::array<double, 9> output;
+  double max_val = *std::max_element(input.begin(), input.end());
+  double sum = 0.0;
+
+  for (int i = 0; i < 9; ++i) {
+    output[i] = std::exp(input[i] - max_val);
+    sum += output[i];
+  }
+  for (int i = 0; i < 9; ++i) {
+    output[i] /= sum;
+  }
+
+  return output;
+}
+
 static std::array<BoardHeuristic, 0x4ce3> init_open_lane_heuristic() {
   std::array<BoardHeuristic, 0x4ce3> ret{};
   for (int i = 0; i < 0x4ce3; ++i) {
     auto [board, board_occ] = hash_to_board(i);
     int other_board = (~board) & board_occ;
 
-    BoardHeuristic score;
+    BoardHeuristic score, other_score;
     dfs_helper(score, board, board_occ, 0, 0);
-    dfs_helper(score, other_board, board_occ, 0, 0);
+    dfs_helper(other_score, other_board, board_occ, 0, 0);
 
-    double sum = 0;
-    for (int j = 0; j < 9; ++j) {
-      sum += score.scores[j];
+    for (int i = 0; i < 9; ++i) {
+      score.scores[i] -= other_score.scores[i];
     }
-    if (sum != 0) {
-      for (int j = 0; j < 9; ++j) {
-        score.scores[j] /= sum;
-      }
-    }
+    score.total_score -= other_score.total_score;
+
+    score.scores = softmax(score.scores);
     ret[i] = score;
   }
   return ret;
