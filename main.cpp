@@ -3,6 +3,7 @@
 #include <random>
 #include <chrono>
 #include <cstring>
+#include <array>
 #define GetTickCount() std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()
 
 using namespace std;
@@ -41,13 +42,6 @@ typedef struct {
 	int best_move;
 }SEARCH_INFO;
 
-bool eval[512];
-static int square_to_grid_square[81];
-static int square_to_grid[81];
-static int grid_to_start_square[9];
-
-unsigned seed;
-
 
 // void dfs_helper(int tmp, int a) {
 // 	if (a == 9) {
@@ -58,35 +52,58 @@ unsigned seed;
 // 	dfs_helper(tmp, a + 1);
 // }
 
-void init_eval() {
-	memset(eval, false, sizeof(eval));
+constexpr std::array<bool, 512> init_eval() {
+	std::array<bool, 512> ret{};
 	for (int i = 0; i < 512; ++i) {
-		eval[i] = 0;
-		eval[i] |= ((i & 7) == 7);
-		eval[i] |= ((i & 56) == 56);
-		eval[i] |= ((i & 448) == 448);
-		eval[i] |= ((i & 73) == 73);
-		eval[i] |= ((i & 146) == 146);
-		eval[i] |= ((i & 292) == 292);
-		eval[i] |= ((i & 273) == 273);
-		eval[i] |= ((i & 84) == 84);
+		ret[i] = ((i & 7) == 7) ||
+				 ((i & 56) == 56) ||
+				 ((i & 448) == 448) ||
+				 ((i & 73) == 73) ||
+				 ((i & 146) == 146) ||
+				 ((i & 292) == 292) ||
+				 ((i & 273) == 273) ||
+				 ((i & 84) == 84);
 	}
-	// dfs_helper(0, 0);
+	return ret;
 }
 
-void init_stg() {
-	for (int i = 0; i < 81; ++i) {
-		int row = i / 9, col = i % 9, grid_square = row % 3 * 3 + col % 3;
-		square_to_grid_square[i] = grid_square;
-		square_to_grid[i] = row / 3 * 3 + col / 3;
-	}
-	for (int i = 0; i < 9; ++i) {
-		int square = i / 3 * 27 + i % 3 * 3;
-		grid_to_start_square[i] = square;
-	}
+
+constexpr std::array<bool, 512> eval = init_eval();
+
+constexpr std::array<int, 81> init_square_to_grid_square() {
+    std::array<int, 81> ret{};
+    for (int i = 0; i < 81; ++i) {
+        int row = i / 9, col = i % 9;
+        ret[i] = row % 3 * 3 + col % 3;
+    }
+    return ret;
 }
 
-char int_to_char[] = { '.', 'O', 'X' };
+constexpr std::array<int, 81> init_square_to_grid() {
+    std::array<int, 81> ret{};
+    for (int i = 0; i < 81; ++i) {
+        int row = i / 9, col = i % 9;
+        ret[i] = row / 3 * 3 + col / 3;
+    }
+    return ret;
+}
+
+constexpr std::array<int, 9> init_grid_to_start_square() {
+    std::array<int, 9> ret{};
+    for (int i = 0; i < 9; ++i) {
+        ret[i] = i / 3 * 27 + i % 3 * 3;
+    }
+    return ret;
+}
+
+constexpr std::array<int, 81> square_to_grid_square = init_square_to_grid_square();
+constexpr std::array<int, 81> square_to_grid = init_square_to_grid();
+constexpr std::array<int, 9> grid_to_start_square = init_grid_to_start_square();
+
+// unsigned seed;
+
+constexpr std::array<char, 3> int_to_char = { '.', 'O', 'X' };
+
 void print_board(int board[], int occ[]) {
 	cout << "   1 2 3  4 5 6  7 8 9\n";
 	for (int i = 0; i < 9; ++i) {
@@ -104,7 +121,7 @@ void print_board(int board[], int occ[]) {
 }
 
 
-static inline bool game_over(GAMESTATE*gs) {
+static constexpr inline bool game_over(GAMESTATE*gs) {
 	return gs->game_occ == 511 || eval[gs->main_board] || eval[(~gs->main_board) & gs->main_occ];
 }
 
@@ -138,37 +155,6 @@ static inline int eval1(GAMESTATE* gs) {
 	// speculative eval
 	return (__builtin_popcount(gs->main_board) - __builtin_popcount((~gs->main_board) & gs->main_occ));
 }
-
-
-static inline int evaldef(GAMESTATE* gs) {
-	if (eval[gs->main_board]) return 1000; // X VICTORY
-	if (eval[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
-	if (gs->game_occ == 511) return 0; // DRAW
-
-	// speculative eval
-	return (9 -__builtin_popcount((~gs->main_board) & gs->main_occ));
-}
-
-static inline int evalaggor(GAMESTATE* gs) {
-	if (eval[gs->main_board]) return 1000; // X VICTORY
-	if (eval[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
-	if (gs->game_occ == 511) return 0; // DRAW
-
-	// speculative eval
-	return __builtin_popcount(gs->main_board);
-}
-
-int top_left_engine(GAMESTATE* gs) {
-	MOVES_LIST list[1];
-	get_valid_moves(list, gs);
-	return list->moves[0];
-};
-
-int bottom_right_engine(GAMESTATE*gs) {
-	MOVES_LIST list[1];
-	get_valid_moves(list, gs);
-	return list->moves[list->count - 1];
-};
 
 int human_engine(GAMESTATE* gs) {
 	MOVES_LIST list[1];
@@ -354,7 +340,7 @@ int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, i
 	MOVES_LIST list[1];
 	get_valid_moves(list, gs);
 	if (!list->count) return side * eval1(gs);
-	shuffle(list->moves, list->moves + list->count, default_random_engine(seed));
+	// shuffle(list->moves, list->moves + list->count, default_random_engine(seed));
 	int temp = gs->last_square;
 	for (int i = 0; i < list->count; ++i) {
 		make_move(gs, list->moves[i]);
@@ -420,10 +406,8 @@ int nega_engine1(GAMESTATE* gs) {
 
 int main()
 {
-	init_eval();
-	init_stg();
-	seed = GetTickCount();
-	srand(seed);
+	// seed = GetTickCount();
+	// srand(seed);
 	game(&nega_engine, &human_engine, true);
 	return 0;
 }
