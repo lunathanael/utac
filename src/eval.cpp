@@ -14,7 +14,7 @@ double eval1(GAMESTATE *gs) {
           __builtin_popcount((~gs->main_board) & gs->main_occ));
 }
 
-int hash_board(int board, int board_occ) {
+static int hash_board(int board, int board_occ) {
   int hash = 0;
   for (int i = 8; i >= 0; --i) {
     hash *= 3;
@@ -27,7 +27,7 @@ int hash_board(int board, int board_occ) {
   return hash;
 }
 
-std::pair<int, int> hash_to_board(int hash) {
+static std::pair<int, int> hash_to_board(int hash) {
   int board = 0;
   int board_occ = 0;
   for (int i = 0; i < 9; ++i) {
@@ -41,7 +41,7 @@ std::pair<int, int> hash_to_board(int hash) {
   return std::make_pair(board, board_occ);
 }
 
-constexpr double dfs_helper(int board, int board_occ, int square, int depth) {
+static constexpr double dfs_helper(int board, int board_occ, int square, int depth) {
   if (wincheck[board])
     return OPEN_LANE_HEURISTIC / (depth * depth);
   if (square == 9)
@@ -56,7 +56,7 @@ constexpr double dfs_helper(int board, int board_occ, int square, int depth) {
   return score;
 }
 
-constexpr std::array<double, 0x4ce3> init_open_lane_heuristic() {
+static std::array<double, 0x4ce3> init_open_lane_heuristic() {
   std::array<double, 0x4ce3> ret{};
   for (int i = 0; i < 0x4ce3; ++i) {
     auto [board, board_occ] = hash_to_board(i);
@@ -79,4 +79,9 @@ constexpr std::array<double, 0x4ce3> init_open_lane_heuristic() {
   return ret;
 }
 
-std::array<double, 0x4ce3> open_lane_heuristic = init_open_lane_heuristic();
+static const std::array<double, 0x4ce3> open_lane_heuristic = init_open_lane_heuristic();
+
+
+static constexpr inline double eval_board(int board, int occ) {
+  return open_lane_heuristic[hash_board(board, occ)];
+}

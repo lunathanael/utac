@@ -98,18 +98,4 @@ int main() {
   // seed = GetTickCount();
   // srand(seed);
   //   game(&nega_engine, &nega_engine, true);
-
-  int board;
-  double best_score = -100000;
-  for (int i = 0; i < 0x4ce3; ++i) {
-    // cout << i << ' ' << open_lane_heuristic[i] << '\n';
-    if (open_lane_heuristic[i] > best_score && open_lane_heuristic[i] < 1000) {
-      best_score = open_lane_heuristic[i];
-      board = i;
-    }
-  }
-  cout << board << ' ' << best_score << '\n';
-  auto [board, occ] = hash_to_board(board);
-  cout << board << ' ' << occ << '\n';
-  return 0;
 }
