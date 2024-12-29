@@ -1,6 +1,5 @@
 #include "moves.hpp"
 
-
 void make_move(GAMESTATE *gs, const int square) {
   int curr_square = square_to_grid[square];
   int grid_square = square_to_grid_square[square];

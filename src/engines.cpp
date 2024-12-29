@@ -1,7 +1,7 @@
 #include "engines.hpp"
+#include "eval.hpp"
 #include "moves.hpp"
 #include "utils.hpp"
-#include "eval.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -45,7 +45,7 @@ double nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info) {
 }
 
 double nega_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info,
-             double alpha = -INF, double beta = INF) {
+                double alpha = -INF, double beta = INF) {
   if (depth == 0) {
     return side * eval1(gs);
   }

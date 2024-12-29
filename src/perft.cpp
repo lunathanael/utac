@@ -1,7 +1,7 @@
 #include "perft.hpp"
+#include "moves.hpp"
 #include "types.hpp"
 #include "utils.hpp"
-#include "moves.hpp"
 
 #include <iostream>
 
@@ -61,7 +61,8 @@ void perft_test(int depth) {
     undo_move(gs, move_list->moves[move_count], temp);
     // print move
     std::cout << "     " << move_list->moves[move_count] / 9 + 1 << ' '
-         << move_list->moves[move_count] % 9 + 1 << "  " << old_nodes << "\n";
+              << move_list->moves[move_count] % 9 + 1 << "  " << old_nodes
+              << "\n";
   }
 
   long time = GetTickCount() - start;

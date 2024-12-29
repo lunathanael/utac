@@ -1,7 +1,5 @@
 #include "utils.hpp"
 
-
-
 void print_board(std::array<int, 9> board, std::array<int, 9> occ) {
   std::cout << "   1 2 3  4 5 6  7 8 9\n";
   for (int i = 0; i < 9; ++i) {

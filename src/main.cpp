@@ -3,14 +3,14 @@
 #include <cstring>
 #include <iostream>
 
+#include "engines.hpp"
+#include "eval.hpp"
+#include "moves.hpp"
+#include "perft.hpp"
 #include "types.hpp"
 #include "utils.hpp"
-#include "moves.hpp"
-#include "engines.hpp"
-#include "perft.hpp"
 
 using namespace std;
-
 
 int game(int (*engX)(GAMESTATE *gs), int (*engO)(GAMESTATE *gs), bool print) {
   GAMESTATE gs[1];
@@ -25,8 +25,8 @@ int game(int (*engX)(GAMESTATE *gs), int (*engO)(GAMESTATE *gs), bool print) {
     // verify move
     MOVES_LIST list[1];
     get_valid_moves(list, gs);
-    if (find(begin(list->moves), begin(list->moves) + list->count, chosen_square) ==
-        begin(list->moves) + list->count) {
+    if (find(begin(list->moves), begin(list->moves) + list->count,
+             chosen_square) == begin(list->moves) + list->count) {
       cout << "INVALID: " << chosen_square << '\n';
       for (int i : list->moves) {
         cout << i << ' ';
@@ -86,8 +86,8 @@ int game(int (*engX)(GAMESTATE *gs), int (*engO)(GAMESTATE *gs), bool print) {
 // 		}
 // 		else {
 // 			std::cout << "info score cp " << bestScore << " depth "
-// << currentDepth << " nodes " << info->nodes << 				" nps " << nps << " time " <<
-// time << " pv ";
+// << currentDepth << " nodes " << info->nodes <<
+// " nps " << nps << " time " << time << " pv ";
 // 		}
 // 		std::cout << Pr_move(info->bestMove) << std::endl;
 // 	}
@@ -97,6 +97,19 @@ int game(int (*engX)(GAMESTATE *gs), int (*engO)(GAMESTATE *gs), bool print) {
 int main() {
   // seed = GetTickCount();
   // srand(seed);
-  game(&nega_engine, &nega_engine, true);
+  //   game(&nega_engine, &nega_engine, true);
+
+  int board;
+  double best_score = -100000;
+  for (int i = 0; i < 0x4ce3; ++i) {
+    // cout << i << ' ' << open_lane_heuristic[i] << '\n';
+    if (open_lane_heuristic[i] > best_score && open_lane_heuristic[i] < 1000) {
+      best_score = open_lane_heuristic[i];
+      board = i;
+    }
+  }
+  cout << board << ' ' << best_score << '\n';
+  auto [board, occ] = hash_to_board(board);
+  cout << board << ' ' << occ << '\n';
   return 0;
 }
