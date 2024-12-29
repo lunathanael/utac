@@ -1,7 +1,9 @@
 #include <iostream>
 #include <algorithm>
 #include <random>
-#include<Windows.h> // temp
+#include <chrono>
+#include <cstring>
+#define GetTickCount() std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()
 
 using namespace std;
 
@@ -40,34 +42,36 @@ typedef struct {
 }SEARCH_INFO;
 
 bool eval[512];
-int square_to_grid_square[81];
-int square_to_grid[81];
-int grid_to_start_square[9];
+static int square_to_grid_square[81];
+static int square_to_grid[81];
+static int grid_to_start_square[9];
 
 unsigned seed;
 
 
-void dfs_helper(int& tmp, int a) {
-	if (a == 9) {
-		eval[tmp] = ((tmp & 7) == 7);
-		eval[tmp] |= ((tmp & 56) == 56);
-		eval[tmp] |= ((tmp & 448) == 448);
-		eval[tmp] |= ((tmp & 73) == 73);
-		eval[tmp] |= ((tmp & 146) == 146);
-		eval[tmp] |= ((tmp & 292) == 292);
-		eval[tmp] |= ((tmp & 273) == 273);
-		eval[tmp] |= ((tmp & 84) == 84);
-		return;
-	}
-	dfs_helper(tmp, a + 1);
-	tmp |= (1 << a);
-	dfs_helper(tmp, a + 1);
-	tmp &= (~(1 << a));
-}
+// void dfs_helper(int tmp, int a) {
+// 	if (a == 9) {
+// 		return;
+// 	}
+// 	dfs_helper(tmp, a + 1);
+// 	tmp |= (1 << a);
+// 	dfs_helper(tmp, a + 1);
+// }
 
 void init_eval() {
-	int tmp = 0;
-	dfs_helper(tmp, 0);
+	memset(eval, false, sizeof(eval));
+	for (int i = 0; i < 512; ++i) {
+		eval[i] = 0;
+		eval[i] |= ((i & 7) == 7);
+		eval[i] |= ((i & 56) == 56);
+		eval[i] |= ((i & 448) == 448);
+		eval[i] |= ((i & 73) == 73);
+		eval[i] |= ((i & 146) == 146);
+		eval[i] |= ((i & 292) == 292);
+		eval[i] |= ((i & 273) == 273);
+		eval[i] |= ((i & 84) == 84);
+	}
+	// dfs_helper(0, 0);
 }
 
 void init_stg() {
@@ -100,7 +104,12 @@ void print_board(int board[], int occ[]) {
 }
 
 
+static inline bool game_over(GAMESTATE*gs) {
+	return gs->game_occ == 511 || eval[gs->main_board] || eval[(~gs->main_board) & gs->main_occ];
+}
+
 void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
+	if (game_over(gs)) return;
 	int a, l;
 	if ((gs->game_occ >> gs->last_square) & 1) {
 		a = 0, l = 9;
@@ -123,26 +132,26 @@ void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 
 static inline int eval1(GAMESTATE* gs) {
 	if (eval[gs->main_board]) return 1000; // X VICTORY
-	if (eval[~gs->main_board & gs->main_occ]) return -1000; // O VICTORY
+	if (eval[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
 	if (gs->game_occ == 511) return 0; // DRAW
 
 	// speculative eval
-	return (__builtin_popcount(gs->main_board) - __builtin_popcount(~gs->main_board & gs->main_occ));
+	return (__builtin_popcount(gs->main_board) - __builtin_popcount((~gs->main_board) & gs->main_occ));
 }
 
 
 static inline int evaldef(GAMESTATE* gs) {
 	if (eval[gs->main_board]) return 1000; // X VICTORY
-	if (eval[~gs->main_board & gs->main_occ]) return -1000; // O VICTORY
+	if (eval[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
 	if (gs->game_occ == 511) return 0; // DRAW
 
 	// speculative eval
-	return (9 -__builtin_popcount(~gs->main_board & gs->main_occ));
+	return (9 -__builtin_popcount((~gs->main_board) & gs->main_occ));
 }
 
 static inline int evalaggor(GAMESTATE* gs) {
 	if (eval[gs->main_board]) return 1000; // X VICTORY
-	if (eval[~gs->main_board & gs->main_occ]) return -1000; // O VICTORY
+	if (eval[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
 	if (gs->game_occ == 511) return 0; // DRAW
 
 	// speculative eval
@@ -173,10 +182,6 @@ int human_engine(GAMESTATE* gs) {
 };
 
 
-static inline bool game_over(GAMESTATE*gs) {
-	return gs->game_occ == 511 || eval[gs->main_board] || eval[~gs->main_board & gs->main_occ];
-}
-
 static inline void make_move(GAMESTATE* gs, const int square) {
 	int curr_square = square_to_grid[square];
 	int grid_square = square_to_grid_square[square];
@@ -185,8 +190,8 @@ static inline void make_move(GAMESTATE* gs, const int square) {
 	gs->side ^= 1;
 
 	//update gs
-	gs->game_occ |= (eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square;
-	gs->main_occ |= (eval[gs->board[curr_square]] || eval[~gs->board[curr_square] & gs->occ[curr_square]]) << curr_square;
+	gs->game_occ |= (eval[gs->board[curr_square]] || eval[(~gs->board[curr_square]) & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square;
+	gs->main_occ |= (eval[gs->board[curr_square]] || eval[(~gs->board[curr_square]) & gs->occ[curr_square]]) << curr_square;
 	gs->main_board |= eval[gs->board[curr_square]] << curr_square;
 	
 	gs->last_square = grid_square;
@@ -232,7 +237,7 @@ int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs), bool print) {
 			cout << ((gs->side) ? "O" : "X") << " chose square on row " << chosen_square / 9 + 1 << " and column " << chosen_square % 9 + 1 << ".\n";
 		}
 	}
-	int res = (eval[gs->main_board]) - (eval[~gs->main_board & gs->main_occ]);
+	int res = (eval[gs->main_board]) - (eval[(~gs->main_board) & gs->main_occ]);
 	if (print) {
 		cout << "GAME OVER!\n";
 		cout << "Result was a ";
@@ -309,7 +314,7 @@ static inline void perft_test(int depth)
 		// take back
 		undo_move(gs, move_list->moves[move_count], temp);
 		// print move
-		cout << "     "<<move_list->moves[move_count] / 9 + 1 << ' ' << move_list->moves[move_count] % 9 + 1 << "  "<< old_nodes <<"\n";
+		cout << "     "<< move_list->moves[move_count] / 9 + 1 << ' ' << move_list->moves[move_count] % 9 + 1 << "  "<< old_nodes <<"\n";
 	}
 
 	long time = GetTickCount() - start;
@@ -366,51 +371,51 @@ int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, i
 
 int nega_engine(GAMESTATE* gs) {
 	SEARCH_INFO info[1];
-	info->root = 12;
-	nega_max(gs, 12, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	info->root = 14;
+	cout << nega_max(gs, 14, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
 	return info->best_move;
 }
 int nega_engine1(GAMESTATE* gs) {
 	SEARCH_INFO info[1];
-	info->root = 7;
-	nega_max(gs, 7, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	info->root = 9;
+	cout << nega_max(gs, 9, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
 	return info->best_move;
 }
 //
 //
-//static inline void iterative_deepen(GAMESTATE*gs, depth)
-//{6
-//	int bestScore = -100000;
-//	int currentDepth = 1;
-//	for (; currentDepth <= depth; ++currentDepth)
-//	{
-//
-//
-//		bestScore = nega_max(gs, depth, (gs->side) ? 1 : -1, depth);
-//
-//
-//
-//		long time = get_time_ms() - info->starttime;
-//		U64 nps = info->nodes / (time + !time) * 1000;
-//
-//		if (bestScore > -VALUE_MATE && bestScore < VALUE_MATED_IN_MAX_PLY)
-//		{
-//			std::cout << "info score mate " << -(bestScore + VALUE_MATE) / 2 << " depth " << currentDepth << " nodes " << info->nodes <<
-//				" nps " << nps << " time " << time << " pv ";
-//		}
-//		else if (bestScore > VALUE_MATE_IN_MAX_PLY && bestScore < VALUE_MATE)
-//		{
-//			std::cout << "info score mate " << (VALUE_MATE - bestScore) / 2 + 1 << " depth " << currentDepth << " nodes " << info->nodes <<
-//				" nps " << nps << " time " << time << " pv ";
-//		}
-//		else {
-//			std::cout << "info score cp " << bestScore << " depth " << currentDepth << " nodes " << info->nodes <<
-//				" nps " << nps << " time " << time << " pv ";
-//		}
-//		std::cout << Pr_move(info->bestMove) << std::endl;
-//	}
-//	std::cout << "bestmove " << Pr_move(info->bestMove) << "\n";
-//}
+// static inline void iterative_deepen(GAMESTATE*gs, int depth)
+// {
+// 	int bestScore = -100000;
+// 	int currentDepth = 1;
+// 	for (; currentDepth <= depth; ++currentDepth)
+// 	{
+
+
+// 		bestScore = nega_max(gs, depth, (gs->side) ? 1 : -1, depth);
+
+
+
+// 		long time = get_time_ms() - info->starttime;
+// 		U64 nps = info->nodes / (time + !time) * 1000;
+
+// 		if (bestScore > -VALUE_MATE && bestScore < VALUE_MATED_IN_MAX_PLY)
+// 		{
+// 			std::cout << "info score mate " << -(bestScore + VALUE_MATE) / 2 << " depth " << currentDepth << " nodes " << info->nodes <<
+// 				" nps " << nps << " time " << time << " pv ";
+// 		}
+// 		else if (bestScore > VALUE_MATE_IN_MAX_PLY && bestScore < VALUE_MATE)
+// 		{
+// 			std::cout << "info score mate " << (VALUE_MATE - bestScore) / 2 + 1 << " depth " << currentDepth << " nodes " << info->nodes <<
+// 				" nps " << nps << " time " << time << " pv ";
+// 		}
+// 		else {
+// 			std::cout << "info score cp " << bestScore << " depth " << currentDepth << " nodes " << info->nodes <<
+// 				" nps " << nps << " time " << time << " pv ";
+// 		}
+// 		std::cout << Pr_move(info->bestMove) << std::endl;
+// 	}
+// 	std::cout << "bestmove " << Pr_move(info->bestMove) << "\n";
+// }
 
 
 int main()
@@ -418,6 +423,7 @@ int main()
 	init_eval();
 	init_stg();
 	seed = GetTickCount();
-	game(&human_engine, &nega_engine, true);
+	srand(seed);
+	game(&nega_engine, &human_engine, true);
 	return 0;
 }
