@@ -1,22 +1,10 @@
 #include "engines.hpp"
 #include "moves.hpp"
 #include "utils.hpp"
+#include "eval.hpp"
 
 #include <algorithm>
 #include <iostream>
-
-int eval1(GAMESTATE *gs) {
-  if (wincheck[gs->main_board])
-    return 1000; // X VICTORY
-  if (wincheck[(~gs->main_board) & gs->main_occ])
-    return -1000; // O VICTORY
-  if (gs->game_occ == 511)
-    return 0; // DRAW
-
-  // speculative eval
-  return (__builtin_popcount(gs->main_board) -
-          __builtin_popcount((~gs->main_board) & gs->main_occ));
-}
 
 int human_engine(GAMESTATE *gs) {
   MOVES_LIST list[1];

@@ -3,8 +3,6 @@
 
 #include "types.hpp"
 
-extern int eval1(GAMESTATE *gs);
-
 extern int human_engine(GAMESTATE *gs);
 extern int nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info);
 
