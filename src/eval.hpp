@@ -7,7 +7,7 @@
 #include <array>
 
 constexpr double FULL_BOARD_HEURISTIC = 1000;
-constexpr double OPEN_LANE_HEURISTIC = 10;
+constexpr double OPEN_LANE_HEURISTIC = 35;
 
 namespace Evals {
 void init();

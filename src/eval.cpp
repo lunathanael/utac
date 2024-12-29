@@ -135,8 +135,10 @@ static std::array<BoardHeuristic, 0x4ce3> init_open_lane_heuristic() {
     int other_board = (~board) & board_occ;
 
     BoardHeuristic score, other_score;
-    dfs_helper(score, board, board_occ, 0, 0);
-    dfs_helper(other_score, other_board, board_occ, 0, 0);
+    if (!wincheck[other_board])
+      dfs_helper(score, board, board_occ, 0, 0);
+    if (!wincheck[board])
+      dfs_helper(other_score, other_board, board_occ, 0, 0);
 
     for (int i = 0; i < 9; ++i) {
       score.scores[i] -= other_score.scores[i];

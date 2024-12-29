@@ -112,5 +112,6 @@ int HC_engine(GAMESTATE *gs) {
   SEARCH_INFO info[1];
   info->root = DEPTH;
   std::cout << HC_max(gs, DEPTH, (gs->side) ? 1 : -1, info) << '\n';
+
   return info->best_move;
 }
