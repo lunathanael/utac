@@ -95,7 +95,7 @@ int game(int (*engX)(GAMESTATE *gs), int (*engO)(GAMESTATE *gs), bool print) {
 // }
 
 int main() {
-  // seed = GetTickCount();
-  // srand(seed);
-  //   game(&nega_engine, &nega_engine, true);
+  Evals::init();
+  srand(GetTickCount());
+  game(&nega_engine, &HC_engine, true);
 }

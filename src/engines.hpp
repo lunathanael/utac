@@ -7,5 +7,6 @@ extern int human_engine(GAMESTATE *gs);
 // extern double nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO
 // *info);
 extern int nega_engine(GAMESTATE *gs);
+extern int HC_engine(GAMESTATE *gs);
 
 #endif

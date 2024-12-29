@@ -79,3 +79,41 @@ int nega_engine(GAMESTATE *gs) {
   std::cout << nega_max(gs, DEPTH, (gs->side) ? 1 : -1, info) << '\n';
   return info->best_move;
 }
+
+
+
+double HC_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info,
+                double alpha = -INF, double beta = INF) {
+  if (depth == 0) {
+    return side * HC_eval(gs);
+  }
+  MOVES_LIST list[1];
+  get_valid_moves(list, gs);
+  if (!list->count)
+    return side * HC_eval(gs);
+  // shuffle(list->moves, list->moves + list->count,
+  // default_random_engine(seed));
+  int temp = gs->last_square;
+  for (int i = 0; i < list->count; ++i) {
+    make_move(gs, list->moves[i]);
+    double score = -nega_max(gs, depth - 1, -side, info, -beta, -alpha);
+    undo_move(gs, list->moves[i], temp);
+    if (score >= beta)
+      return beta;
+    if (score > alpha) {
+      alpha = score;
+      if (depth == info->root)
+        info->best_move = list->moves[i];
+    }
+  }
+  return alpha;
+}
+
+int HC_engine(GAMESTATE *gs) {
+  int DEPTH = 10;
+
+  SEARCH_INFO info[1];
+  info->root = DEPTH;
+  std::cout << HC_max(gs, DEPTH, (gs->side) ? 1 : -1, info) << '\n';
+  return info->best_move;
+}

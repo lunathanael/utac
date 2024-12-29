@@ -14,5 +14,6 @@ void init();
 }
 
 extern double eval1(GAMESTATE *gs);
+extern double HC_eval(GAMESTATE *gs);
 
 #endif
