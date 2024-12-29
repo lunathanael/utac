@@ -1,7 +1,7 @@
 #include "eval.hpp"
 #include "utils.hpp"
 
-int eval1(GAMESTATE *gs) {
+double eval1(GAMESTATE *gs) {
   if (wincheck[gs->main_board])
     return WIN_SCORE; // X VICTORY
   if (wincheck[(~gs->main_board) & gs->main_occ])
@@ -12,4 +12,9 @@ int eval1(GAMESTATE *gs) {
   // speculative eval
   return (__builtin_popcount(gs->main_board) -
           __builtin_popcount((~gs->main_board) & gs->main_occ));
+}
+
+double eval_board(int board, int occ) {
+  return (__builtin_popcount(board) -
+          __builtin_popcount((~board) & occ));
 }

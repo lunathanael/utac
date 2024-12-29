@@ -3,6 +3,8 @@
 
 #include "types.hpp"
 
-extern int eval1(GAMESTATE *gs);
+extern double eval1(GAMESTATE *gs);
+
+extern double eval_board(int board, int occ);
 
 #endif

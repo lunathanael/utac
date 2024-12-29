@@ -21,11 +21,11 @@ int human_engine(GAMESTATE *gs) {
   return (row - 1) * 9 + col - 1;
 };
 
-int nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info) {
+double nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info) {
   if (depth == 0) {
     return side * eval1(gs);
   }
-  int bestScore = -INF;
+  double bestScore = -INF;
   MOVES_LIST list[1];
   get_valid_moves(list, gs);
   if (!list->count)
@@ -33,7 +33,7 @@ int nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info) {
   int temp = gs->last_square;
   for (int i = 0; i < list->count; ++i) {
     make_move(gs, list->moves[i]);
-    int score = -nega_min_max(gs, depth - 1, -side, info);
+    double score = -nega_min_max(gs, depth - 1, -side, info);
     if (score > bestScore) {
       bestScore = score;
       if (depth == info->root)
@@ -44,8 +44,8 @@ int nega_min_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info) {
   return bestScore;
 }
 
-int nega_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info,
-             int alpha = -INF, int beta = INF) {
+double nega_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info,
+             double alpha = -INF, double beta = INF) {
   if (depth == 0) {
     return side * eval1(gs);
   }
@@ -58,7 +58,7 @@ int nega_max(GAMESTATE *gs, int depth, int side, SEARCH_INFO *info,
   int temp = gs->last_square;
   for (int i = 0; i < list->count; ++i) {
     make_move(gs, list->moves[i]);
-    int score = -nega_max(gs, depth - 1, -side, info, -beta, -alpha);
+    double score = -nega_max(gs, depth - 1, -side, info, -beta, -alpha);
     undo_move(gs, list->moves[i], temp);
     if (score >= beta)
       return beta;
