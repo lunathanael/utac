@@ -141,7 +141,7 @@ static std::array<BoardHeuristic, 0x4ce3> init_open_lane_heuristic() {
       dfs_helper(other_score, other_board, board_occ, 0, 0);
 
     for (int i = 0; i < 9; ++i) {
-      score.scores[i] -= other_score.scores[i];
+      score.scores[i] += other_score.scores[i];
     }
     score.total_score -= other_score.total_score;
 

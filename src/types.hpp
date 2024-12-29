@@ -4,7 +4,7 @@
 #include <array>
 
 constexpr double INF = 1e9;
-constexpr double WIN_SCORE = 100'000;
+constexpr double WIN_SCORE = 1'000'000;
 constexpr double DRAW_SCORE = 0;
 
 enum SIDES { SIDE_X, SIDE_O, NO_SIDE };
