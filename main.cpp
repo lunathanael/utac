@@ -8,6 +8,10 @@
 
 using namespace std;
 
+static constexpr double INF = 1e9;
+static constexpr double WIN_SCORE = 100'000;
+static constexpr double DRAW_SCORE = 0;
+
 
 enum SIDES {
 	SIDE_X, SIDE_O, NO_SIDE
@@ -66,6 +70,7 @@ constexpr std::array<bool, 512> init_wincheck() {
 	}
 	return ret;
 }
+
 
 
 constexpr std::array<bool, 512> wincheck = init_wincheck();
@@ -316,7 +321,7 @@ int nega_min_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO*info) {
 	if (depth == 0) {
 		return side * eval1(gs);
 	}
-	int bestScore = -10000;
+	int bestScore = -INF;
 	MOVES_LIST list[1];
 	get_valid_moves(list, gs);
 	if (!list->count) return side * eval1(gs);
@@ -333,7 +338,7 @@ int nega_min_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO*info) {
 	return bestScore;
 }
 
-int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, int beta) {
+int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha = -INF, int beta = INF) {
 	if (depth == 0) {
 		return side * eval1(gs);
 	}
@@ -355,16 +360,11 @@ int nega_max(GAMESTATE* gs, int depth, int side, SEARCH_INFO* info, int alpha, i
 	return alpha;
 }
 
+template<int DEPTH>
 int nega_engine(GAMESTATE* gs) {
 	SEARCH_INFO info[1];
-	info->root = 14;
-	cout << nega_max(gs, 14, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
-	return info->best_move;
-}
-int nega_engine1(GAMESTATE* gs) {
-	SEARCH_INFO info[1];
-	info->root = 9;
-	cout << nega_max(gs, 9, (gs->side) ? 1 : -1, info, -10000, 10000) << '\n';
+	info->root = DEPTH;
+	cout << nega_max(gs, DEPTH, (gs->side) ? 1 : -1, info) << '\n';
 	return info->best_move;
 }
 //
@@ -408,6 +408,6 @@ int main()
 {
 	// seed = GetTickCount();
 	// srand(seed);
-	game(&nega_engine, &human_engine, true);
+	game(&nega_engine<8>, &nega_engine<12>, true);
 	return 0;
 }
