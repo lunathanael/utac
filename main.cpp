@@ -52,7 +52,7 @@ typedef struct {
 // 	dfs_helper(tmp, a + 1);
 // }
 
-constexpr std::array<bool, 512> init_eval() {
+constexpr std::array<bool, 512> init_wincheck() {
 	std::array<bool, 512> ret{};
 	for (int i = 0; i < 512; ++i) {
 		ret[i] = ((i & 7) == 7) ||
@@ -68,7 +68,7 @@ constexpr std::array<bool, 512> init_eval() {
 }
 
 
-constexpr std::array<bool, 512> eval = init_eval();
+constexpr std::array<bool, 512> wincheck = init_wincheck();
 
 constexpr std::array<int, 81> init_square_to_grid_square() {
     std::array<int, 81> ret{};
@@ -122,7 +122,7 @@ void print_board(int board[], int occ[]) {
 
 
 static constexpr inline bool game_over(GAMESTATE*gs) {
-	return gs->game_occ == 511 || eval[gs->main_board] || eval[(~gs->main_board) & gs->main_occ];
+	return gs->game_occ == 511 || wincheck[gs->main_board] || wincheck[(~gs->main_board) & gs->main_occ];
 }
 
 void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
@@ -148,8 +148,8 @@ void get_valid_moves(MOVES_LIST* list, GAMESTATE*gs) {
 }
 
 static inline int eval1(GAMESTATE* gs) {
-	if (eval[gs->main_board]) return 1000; // X VICTORY
-	if (eval[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
+	if (wincheck[gs->main_board]) return 1000; // X VICTORY
+	if (wincheck[(~gs->main_board) & gs->main_occ]) return -1000; // O VICTORY
 	if (gs->game_occ == 511) return 0; // DRAW
 
 	// speculative eval
@@ -176,9 +176,9 @@ static inline void make_move(GAMESTATE* gs, const int square) {
 	gs->side ^= 1;
 
 	//update gs
-	gs->game_occ |= (eval[gs->board[curr_square]] || eval[(~gs->board[curr_square]) & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square;
-	gs->main_occ |= (eval[gs->board[curr_square]] || eval[(~gs->board[curr_square]) & gs->occ[curr_square]]) << curr_square;
-	gs->main_board |= eval[gs->board[curr_square]] << curr_square;
+	gs->game_occ |= (wincheck[gs->board[curr_square]] || wincheck[(~gs->board[curr_square]) & gs->occ[curr_square]] || gs->occ[curr_square] == 511) << curr_square;
+	gs->main_occ |= (wincheck[gs->board[curr_square]] || wincheck[(~gs->board[curr_square]) & gs->occ[curr_square]]) << curr_square;
+	gs->main_board |= wincheck[gs->board[curr_square]] << curr_square;
 	
 	gs->last_square = grid_square;
 	return;
@@ -223,7 +223,7 @@ int game(int(*engX)(GAMESTATE* gs), int(*engO)(GAMESTATE * gs), bool print) {
 			cout << ((gs->side) ? "O" : "X") << " chose square on row " << chosen_square / 9 + 1 << " and column " << chosen_square % 9 + 1 << ".\n";
 		}
 	}
-	int res = (eval[gs->main_board]) - (eval[(~gs->main_board) & gs->main_occ]);
+	int res = (wincheck[gs->main_board]) - (wincheck[(~gs->main_board) & gs->main_occ]);
 	if (print) {
 		cout << "GAME OVER!\n";
 		cout << "Result was a ";
