@@ -18,6 +18,9 @@ void make_move(GAMESTATE *gs, const int square) {
   gs->main_board |= wincheck[gs->board[curr_square]] << curr_square;
 
   gs->last_square = grid_square;
+  if ((gs->game_occ >> gs->last_square) & 1 || gs->last_square == -1) {
+    gs->last_square = -1;
+  }
   return;
 }
 
