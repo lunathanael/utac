@@ -10,6 +10,8 @@ private:
     GAMESTATE gs;
 public:
     State();
+    State(const GAMESTATE& gs);
+    State(const State& state);
     void make_move(int move);
     std::array<std::array<int, 81>, 2> get_obs() const;
     std::vector<int> get_valid_moves() const;

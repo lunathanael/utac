@@ -10,6 +10,10 @@ void State::make_move(int move) {
     ::make_move(&gs, move);
 }
 
+State::State(const GAMESTATE& gs) : gs(gs) {}
+
+State::State(const State& state) : gs(state.gs) {}
+
 std::array<std::array<int, 81>, 2> State::get_obs() const {
     std::array<std::array<int, 81>, 2> obs;
 
