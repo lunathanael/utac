@@ -15,7 +15,10 @@ public:
     std::array<int, 81> get_valid_mask() const;
     bool is_terminal() const;
     int terminal_value() const;
+    int current_player() const;
     void print() const;
+
+    GAMESTATE _get_gs() const;
 };
 
 #endif

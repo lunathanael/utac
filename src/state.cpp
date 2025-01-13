@@ -56,3 +56,10 @@ void State::print() const {
     ::print_board(gs.board, gs.occ);
 }
 
+GAMESTATE State::_get_gs() const {
+    return gs;
+}
+
+int State::current_player() const {
+    return gs.side;
+}
