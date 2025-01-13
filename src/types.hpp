@@ -13,7 +13,7 @@ enum COLS { COL_0, COL_1, COL_2, COL_3, COL_4, COL_5, COL_6, COL_7, COL_8 };
 
 enum ROWS { ROW_0, ROW_1, ROW_2, ROW_3, ROW_4, ROW_5, ROW_6, ROW_7, ROW_8 };
 
-typedef struct {
+typedef struct MOVES_LIST {
   std::array<int, 81> moves{};
   int count = 0;
 } MOVES_LIST;
@@ -29,7 +29,7 @@ typedef struct GAMESTATE {
   int last_square = -1;
 } GAMESTATE;
 
-typedef struct {
+typedef struct SEARCH_INFO {
   int root;
   int best_move;
 } SEARCH_INFO;
