@@ -3,6 +3,13 @@
 
 #include <algorithm>
 #include <cmath>
+
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  define __builtin_popcount __popcnt
+#endif
+
+
 double eval1(GAMESTATE *gs) {
   if (wincheck[gs->main_board])
     return WIN_SCORE; // X VICTORY
