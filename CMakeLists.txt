@@ -13,6 +13,7 @@ set(UTAC_SOURCES
     "src/moves.cpp"
     "src/perft.cpp"
     "src/utils.cpp"
+    "src/state.cpp"
 )
 
 # Header files
@@ -23,6 +24,7 @@ set(UTAC_HEADERS
     "src/perft.hpp"
     "src/types.hpp"
     "src/utils.hpp"
+    "src/state.hpp"
 )
 
 # Compiler flags
