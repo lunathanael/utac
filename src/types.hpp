@@ -18,7 +18,7 @@ typedef struct {
   int count = 0;
 } MOVES_LIST;
 
-typedef struct {
+typedef struct GAMESTATE {
   std::array<int, 9> occ{};
   std::array<int, 9> board{};
 
