@@ -37,11 +37,11 @@ void undo_move(GAMESTATE *gs, const int square, const int prev_last) {
   return;
 }
 
-void get_valid_moves(MOVES_LIST *list, GAMESTATE *gs) {
+void get_valid_moves(MOVES_LIST *list, const GAMESTATE *gs) {
   if (game_over(gs))
     return;
   int a, l;
-  if ((gs->game_occ >> gs->last_square) & 1) {
+  if ((gs->game_occ >> gs->last_square) & 1 || gs->last_square == -1) {
     a = 0, l = 9;
   } else {
     a = gs->last_square, l = gs->last_square + 1;
@@ -54,6 +54,29 @@ void get_valid_moves(MOVES_LIST *list, GAMESTATE *gs) {
       for (int j = 0; j < 3; ++j) {
         if (!(gs->occ[a] >> (i * 3 + j) & 1)) {
           list->moves[list->count++] = ss + i * 9 + j;
+        }
+      }
+    }
+  }
+}
+
+void get_valid_mask(MOVES_LIST *list, const GAMESTATE *gs) {
+  if (game_over(gs))
+    return;
+  int a, l;
+  if ((gs->game_occ >> gs->last_square) & 1 || gs->last_square == -1) {
+    a = 0, l = 9;
+  } else {
+    a = gs->last_square, l = gs->last_square + 1;
+  }
+  for (; a < l; ++a) {
+    if ((gs->game_occ >> a) & 1)
+      continue;
+    int ss = grid_to_start_square[a];
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        if (!(gs->occ[a] >> (i * 3 + j) & 1)) {
+          list->moves[ss + i * 9 + j] = 1;
         }
       }
     }
