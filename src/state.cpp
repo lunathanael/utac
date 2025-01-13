@@ -30,10 +30,10 @@ std::array<std::array<int, 81>, 2> State::get_obs() const {
     return obs;
 }
 
-std::array<int, 81> State::get_valid_moves() const {
+std::vector<int> State::get_valid_moves() const {
     MOVES_LIST list[1];
     ::get_valid_moves(list, &gs);
-    return list->moves;
+    return std::vector<int>(list->moves.begin(), list->moves.begin() + list->count);
 }
 
 std::array<int, 81> State::get_valid_mask() const {
