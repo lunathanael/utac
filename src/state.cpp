@@ -14,8 +14,8 @@ State::State(const GAMESTATE& gs) : gs(gs) {}
 
 State::State(const State& state) : gs(state.gs) {}
 
-std::array<std::array<int, 81>, 2> State::get_obs() const {
-    std::array<std::array<int, 81>, 2> obs;
+std::array<std::array<int, 81>, 4> State::get_obs() const {
+    std::array<std::array<int, 81>, 4> obs;
 
     for (int i = 0; i < 81; ++i) {
         int grid = square_to_grid[i];
@@ -27,9 +27,18 @@ std::array<std::array<int, 81>, 2> State::get_obs() const {
         } else {
             obs[0][i] = 0;
         }
+        if (gs.game_occ >> grid_square & 1) {
+            obs[1][i] = 1;
+            if (gs.main_board >> grid_square & 1) {
+                obs[2][i] = 1;
+            }
+            if ((~gs.main_board & gs.main_occ) >> grid_square & 1) {
+                obs[2][i] = -1;
+            }
+        }
     }
 
-    obs[1] = get_valid_mask();
+    obs[3] = get_valid_mask();
 
     return obs;
 }
