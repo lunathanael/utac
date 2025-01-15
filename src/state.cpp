@@ -15,7 +15,7 @@ State::State(const GAMESTATE& gs) : gs(gs) {}
 State::State(const State& state) : gs(state.gs) {}
 
 std::array<std::array<int, 81>, 4> State::get_obs() const {
-    std::array<std::array<int, 81>, 4> obs;
+    std::array<std::array<int, 81>, 4> obs{};
 
     for (int i = 0; i < 81; ++i) {
         int grid = square_to_grid[i];
