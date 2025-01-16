@@ -27,12 +27,13 @@ std::array<std::array<int, 81>, 4> State::get_obs() const {
         } else {
             obs[0][i] = 0;
         }
-        if (gs.game_occ >> grid_square & 1) {
+        int subgame = square_to_grid[i];
+        if (gs.game_occ >> subgame & 1) {
             obs[1][i] = 1;
-            if (gs.main_board >> grid_square & 1) {
+            if (gs.main_board >> subgame & 1) {
                 obs[2][i] = 1;
             }
-            if ((~gs.main_board & gs.main_occ) >> grid_square & 1) {
+            if ((~gs.main_board & gs.main_occ) >> subgame & 1) {
                 obs[2][i] = -1;
             }
         }
